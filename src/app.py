@@ -1,6 +1,7 @@
 import tkinter as tk
 import ttkbootstrap as ttk
 from tkinter import filedialog as fd
+import file_window as fw
 
 
 # main app
@@ -125,8 +126,12 @@ class TaskWindow(ttk.Frame):
         self.title_label = title_label
         self.title_label.pack(fill="x")
 
+        # inner frame
+        self.import_frame = ttk.Frame(master=self)
+        self.import_frame.pack(expand=True, fill="both")
+
         # File Import button
-        self.files = FileImport(self)
+        FileImport(self.import_frame)
 
         # back button
         self.back_button = ttk.Button(
@@ -146,14 +151,14 @@ class TaskWindow(ttk.Frame):
 
 # class to import files
 class FileImport(ttk.Frame):
-    def __init__(self, parent) -> None:
+    def __init__(self, parent: ttk.Frame) -> None:
         super().__init__(master=parent)
 
         # dialog box trigger button
         self.button = ttk.Button(
             master=self,
             text="Import Files",
-            command=self.import_files,
+            command=lambda: self.import_files(parent),
             bootstyle="danger",
         )
         self.button.pack(pady=10)
@@ -161,12 +166,16 @@ class FileImport(ttk.Frame):
         self.pack()
 
     # open dialog box and store the selected files in a tuple
-    def import_files(self) -> tuple:
+    def import_files(self, p: ttk.Frame) -> tuple:
         filetypes = (("PDFs", "*.pdf"), ("All files", "*.*"))
 
         files = fd.askopenfilenames(
             title="Import files", initialdir="/", filetypes=filetypes
         )
+
+        if len(files) > 0:
+            self.pack_forget()
+            fw.FileWindow(p, files)
 
         return files
 
