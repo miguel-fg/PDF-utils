@@ -1,21 +1,24 @@
 import tkinter as tk
 import ttkbootstrap as ttk
+from tkinter import filedialog as fd
 
 
+# main app
 class App(ttk.Window):
-    def __init__(self, title: str, dimensions: tuple):
+    def __init__(self, title: str, dimensions: tuple) -> None:
         super().__init__(themename="minty")
         # app setup
         self.title(title)
         self.geometry(f"{dimensions[0]}x{dimensions[1]}")
-        self.minsize(width=dimensions[0], height=dimensions[1])
-
+        self.minsize(width=1000, height=800)
+        # main menu layout
         self.main_menu()
 
         # run
         self.mainloop()
 
-    def main_menu(self):
+    # Main menu of the app, user selects task to perform
+    def main_menu(self) -> None:
         # labels
         self.app_title = ttk.Label(
             master=self,
@@ -39,6 +42,7 @@ class App(ttk.Window):
         self.options = self.options_frame(parent=self)
         self.options.pack(expand=True, fill="both", padx=200, pady=100)
 
+    # option buttons
     def options_frame(self, parent: ttk.Window) -> ttk.Frame:
         frame = ttk.Frame(master=parent)
 
@@ -79,7 +83,11 @@ class App(ttk.Window):
         self.label.pack_forget()
         self.options.pack_forget()
 
-        MergeWindow(self)
+        title_label = ttk.Label(
+            master=self, text="Merge", font=("Helvetica", 40), anchor="center"
+        )
+
+        TaskWindow(self, title_label)
 
     # create Split menu
     def split_selected(self) -> None:
@@ -88,7 +96,11 @@ class App(ttk.Window):
         self.label.pack_forget()
         self.options.pack_forget()
 
-        SplitWindow(self)
+        title_label = ttk.Label(
+            master=self, text="Split", font=("Helvetica", 40), anchor="center"
+        )
+
+        TaskWindow(self, title_label)
 
     # create Compress menu
     def compress_selected(self) -> None:
@@ -97,60 +109,26 @@ class App(ttk.Window):
         self.label.pack_forget()
         self.options.pack_forget()
 
-        CompressWindow(self)
-
-
-class MergeWindow(ttk.Frame):
-    def __init__(self, parent: ttk.Window) -> None:
-        super().__init__(master=parent)
-
-        self.title_label = ttk.Label(
-            master=self, text="Merge", font=("Helvetica", 40), anchor="center"
-        )
-        self.title_label.pack(fill="x")
-
-        self.back_button = ttk.Button(
-            master=self, text="Back", command=lambda: self.go_back(parent)
-        )
-        self.back_button.pack()
-
-        self.pack(expand=True, fill="both")
-
-    def go_back(self, p: ttk.Window):
-        # clean the window and goes back to main menu
-        self.pack_forget()
-        p.main_menu()
-
-class SplitWindow(ttk.Frame):
-    def __init__(self, parent: ttk.Window) -> None:
-        super().__init__(master=parent)
-
-        self.title_label = ttk.Label(
-            master=self, text="Split", font=("Helvetica", 40), anchor="center"
-        )
-        self.title_label.pack(fill="x")
-
-        self.back_button = ttk.Button(
-            master=self, text="Back", command=lambda: self.go_back(parent)
-        )
-        self.back_button.pack()
-
-        self.pack(expand=True, fill="both")
-
-    def go_back(self, p: ttk.Window):
-        # clean the window and goes back to main menu
-        self.pack_forget()
-        p.main_menu()
-
-class CompressWindow(ttk.Frame):
-    def __init__(self, parent: ttk.Window) -> None:
-        super().__init__(master=parent)
-
-        self.title_label = ttk.Label(
+        title_label = ttk.Label(
             master=self, text="Compress", font=("Helvetica", 40), anchor="center"
         )
+
+        TaskWindow(self, title_label)
+
+
+# window to perform a selected task on a PDF file
+class TaskWindow(ttk.Frame):
+    def __init__(self, parent: ttk.Window, title_label: ttk.Label) -> None:
+        super().__init__(master=parent)
+
+        # window title
+        self.title_label = title_label
         self.title_label.pack(fill="x")
 
+        # File Import button
+        self.files = FileImport(self)
+
+        # back button
         self.back_button = ttk.Button(
             master=self, text="Back", command=lambda: self.go_back(parent)
         )
@@ -158,9 +136,39 @@ class CompressWindow(ttk.Frame):
 
         self.pack(expand=True, fill="both")
 
-    def go_back(self, p: ttk.Window):
+    # back to main menu button
+    def go_back(self, p: ttk.Window) -> None:
         # clean the window and goes back to main menu
+        self.title_label.pack_forget()
         self.pack_forget()
         p.main_menu()
+
+
+# class to import files
+class FileImport(ttk.Frame):
+    def __init__(self, parent) -> None:
+        super().__init__(master=parent)
+
+        # dialog box trigger button
+        self.button = ttk.Button(
+            master=self,
+            text="Import Files",
+            command=self.import_files,
+            bootstyle="danger",
+        )
+        self.button.pack(pady=10)
+
+        self.pack()
+
+    # open dialog box and store the selected files in a tuple
+    def import_files(self) -> tuple:
+        filetypes = (("PDFs", "*.pdf"), ("All files", "*.*"))
+
+        files = fd.askopenfilenames(
+            title="Import files", initialdir="/", filetypes=filetypes
+        )
+
+        return files
+
 
 App("PDF utilities", (1600, 900))
