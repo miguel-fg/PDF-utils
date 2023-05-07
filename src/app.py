@@ -1,15 +1,27 @@
-# 
+# GUI
 import tkinter as tk
 import ttkbootstrap as ttk
 from tkinter import filedialog as fd
 from ttkbootstrap.scrolled import ScrolledFrame
+
+# filename manipulation
 import os
+
+# image rendering
+from PIL import Image, ImageTk
+
+# PDF tools
 import fitz
+
 
 # main app
 class App(ttk.Window):
     def __init__(self, title: str, dimensions: tuple) -> None:
-        super().__init__(themename="minty")
+        super().__init__(themename="morph")
+
+        if not os.path.exists("src\.imgcache"):
+            os.makedirs("src\.imgcache")
+
         # app setup
         self.title(title)
         self.geometry(f"{dimensions[0]}x{dimensions[1]}")
@@ -27,7 +39,7 @@ class App(ttk.Window):
             master=self,
             text="PDF utils",
             anchor="center",
-            bootstyle="inverse-light",
+            bootstyle="default",
             font=("Helvetica Bold", 40),
         )
         self.label = ttk.Label(
@@ -182,23 +194,21 @@ class FileImport(ttk.Frame):
 
         return files
 
-# class to 
+
+# class to visualize file changes
 class FileWindow(ScrolledFrame):
     def __init__(self, parent: ttk.Window, files: tuple, task: str) -> None:
         super().__init__(master=parent, autohide=True, bootstyle="default")
 
-        self.panel = SlidePanel(parent, 1, 0.8)
+        self.panel = SlidePanel(parent, 1, 0.8)  # side panel instance
 
-        self.file_images_display = ScrolledFrame(master=self.panel, autohide=True)
-        ttk.Label(master=self.file_images_display, background="red").pack(
-            expand=True, fill="both"
+        # this will hold the file page images
+        self.images = []
+        self.file_images_display = ScrolledFrame(
+            master=self.panel, autohide=True, bootstyle="secondary"
         )
 
-        ttk.Button(
-            master=self.panel, text="Something", command=lambda: self.task(task)
-        ).pack(expand=True, fill="both")
-
-        # display files
+        # display files in main window
         for index, file in enumerate(files):
             filename = os.path.basename(file)
 
@@ -206,10 +216,28 @@ class FileWindow(ScrolledFrame):
                 expand=True, fill="both"
             )
 
+            self.images = self.extract_images(index, file)
+
+        # display files in side panel
+        for img in self.images:
+            ttk.Label(
+                master=self.file_images_display,
+                image=img,
+                anchor="center",
+            ).pack(pady=5)
+
+        self.file_images_display.pack(expand=True, fill="both")
+
+        # this button triggers the task
+        ttk.Button(
+            master=self.panel, text="Something", command=lambda: self.task(task)
+        ).pack(expand=True, fill="both")
+
         self.panel.animate_forward()
 
         self.pack(expand=True, fill="both")
 
+    # action to perform
     def task(self, task: str):
         self.panel.animate_backwards()
 
@@ -219,6 +247,26 @@ class FileWindow(ScrolledFrame):
             print("I split things :D")
         elif task == "Compress":
             print("I compressed things :D")
+
+    # extract pdf page images
+    def extract_images(self, filenum: int, filepath: str):
+        doc = fitz.open(filepath)
+        imgs = []
+        w = 250
+        h = 325
+
+        # save images and generate cache
+        for page in doc:
+            pix = page.get_pixmap()
+            pix.save(f"src\.imgcache\\f{filenum}-page-{page.number}.png")
+
+            image_original = Image.open(
+                f"src\.imgcache\\f{filenum}-page-{page.number}.png"
+            ).resize((w, h))
+            image_tk = ImageTk.PhotoImage(image_original)
+            imgs.append(image_tk)
+
+        return imgs
 
 
 # animated side panel

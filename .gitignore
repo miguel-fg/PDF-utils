@@ -154,3 +154,9 @@ cython_debug/
 
 #VScode
 .vscode/
+
+#debugging files
+test.py
+
+# image cache
+.imgcache/
