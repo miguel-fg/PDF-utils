@@ -1,8 +1,10 @@
+# 
 import tkinter as tk
 import ttkbootstrap as ttk
 from tkinter import filedialog as fd
-import file_window as fw
-
+from ttkbootstrap.scrolled import ScrolledFrame
+import os
+import fitz
 
 # main app
 class App(ttk.Window):
@@ -131,7 +133,7 @@ class TaskWindow(ttk.Frame):
         self.import_frame.pack(expand=True, fill="both")
 
         # File Import button
-        FileImport(self.import_frame)
+        FileImport(self.import_frame, title_label["text"])
 
         # back button
         self.back_button = ttk.Button(
@@ -151,14 +153,14 @@ class TaskWindow(ttk.Frame):
 
 # class to import files
 class FileImport(ttk.Frame):
-    def __init__(self, parent: ttk.Frame) -> None:
+    def __init__(self, parent: ttk.Frame, task: str) -> None:
         super().__init__(master=parent)
 
         # dialog box trigger button
         self.button = ttk.Button(
             master=self,
             text="Import Files",
-            command=lambda: self.import_files(parent),
+            command=lambda: self.import_files(parent, task),
             bootstyle="danger",
         )
         self.button.pack(pady=10)
@@ -166,7 +168,7 @@ class FileImport(ttk.Frame):
         self.pack()
 
     # open dialog box and store the selected files in a tuple
-    def import_files(self, p: ttk.Frame) -> tuple:
+    def import_files(self, p: ttk.Frame, task: str) -> tuple:
         filetypes = (("PDFs", "*.pdf"), ("All files", "*.*"))
 
         files = fd.askopenfilenames(
@@ -175,9 +177,92 @@ class FileImport(ttk.Frame):
 
         if len(files) > 0:
             self.pack_forget()
-            fw.FileWindow(p, files)
+
+            FileWindow(p, files, task)
 
         return files
+
+# class to 
+class FileWindow(ScrolledFrame):
+    def __init__(self, parent: ttk.Window, files: tuple, task: str) -> None:
+        super().__init__(master=parent, autohide=True, bootstyle="default")
+
+        self.panel = SlidePanel(parent, 1, 0.8)
+
+        self.file_images_display = ScrolledFrame(master=self.panel, autohide=True)
+        ttk.Label(master=self.file_images_display, background="red").pack(
+            expand=True, fill="both"
+        )
+
+        ttk.Button(
+            master=self.panel, text="Something", command=lambda: self.task(task)
+        ).pack(expand=True, fill="both")
+
+        # display files
+        for index, file in enumerate(files):
+            filename = os.path.basename(file)
+
+            ttk.Label(master=self, text=f"{index + 1}:\t\t{filename}").pack(
+                expand=True, fill="both"
+            )
+
+        self.panel.animate_forward()
+
+        self.pack(expand=True, fill="both")
+
+    def task(self, task: str):
+        self.panel.animate_backwards()
+
+        if task == "Merge":
+            print("I merged things :D")
+        elif task == "Split":
+            print("I split things :D")
+        elif task == "Compress":
+            print("I compressed things :D")
+
+
+# animated side panel
+class SlidePanel(ttk.Frame):
+    def __init__(self, parent, start_pos, end_pos) -> None:
+        super().__init__(master=parent)
+
+        # general attributes
+        self.start_pos = start_pos
+        self.end_pos = end_pos - 0.01
+
+        self.width = abs(start_pos - end_pos)
+
+        # animation logic
+        self.pos = start_pos
+        self.in_start_pos = True
+
+        # layout
+        self.place(relx=start_pos, rely=0.05, relwidth=self.width, relheight=0.9)
+
+    # check which way to animate
+    def animate(self) -> None:
+        if self.in_start_pos:
+            self.animate_forward()
+        else:
+            self.animate_backwards()
+
+    # calls the function up to the defined end position
+    def animate_forward(self) -> None:
+        if self.pos > self.end_pos:
+            self.pos -= 0.008
+            self.place(relx=self.pos, rely=0.05, relwidth=self.width, relheight=0.9)
+            self.after(10, self.animate_forward)
+        else:
+            self.in_start_pos = False
+
+    # moves the panel back
+    def animate_backwards(self) -> None:
+        if self.pos < self.start_pos:
+            self.pos += 0.008
+            self.place(relx=self.pos, rely=0.05, relwidth=self.width, relheight=0.9)
+            self.after(10, self.animate_backwards)
+        else:
+            self.in_start_pos = True
 
 
 App("PDF utilities", (1600, 900))
