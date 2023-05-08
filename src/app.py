@@ -19,13 +19,18 @@ class App(ttk.Window):
     def __init__(self, title: str, dimensions: tuple) -> None:
         super().__init__(themename="morph")
 
+        # creates a clean cache folder for GUI display images
         if not os.path.exists("src\.imgcache"):
             os.makedirs("src\.imgcache")
+        else:
+            for img in os.scandir("src\.imgcache"):
+                os.remove(img.path)
 
         # app setup
         self.title(title)
         self.geometry(f"{dimensions[0]}x{dimensions[1]}")
         self.minsize(width=1000, height=800)
+
         # main menu layout
         self.main_menu()
 
@@ -50,12 +55,12 @@ class App(ttk.Window):
             font=("Helvetica", 15),
         )
 
-        self.app_title.pack(fill="x")
+        self.app_title.pack(fill="x", pady=5)
         self.label.pack(fill="x")
 
         # option grid
         self.options = self.options_frame(parent=self)
-        self.options.pack(expand=True, fill="both", padx=200, pady=100)
+        self.options.pack(expand=True, fill="both", padx=100, pady=100)
 
     # option buttons
     def options_frame(self, parent: ttk.Window) -> ttk.Frame:
@@ -85,9 +90,9 @@ class App(ttk.Window):
             bootstyle="info",
         )
 
-        merge_btn.grid(row=0, column=0, sticky="nsew", padx=10, pady=200)
-        split_btn.grid(row=0, column=1, sticky="nsew", padx=10, pady=200)
-        compress_btn.grid(row=0, column=2, sticky="nsew", padx=10, pady=200)
+        merge_btn.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        split_btn.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        compress_btn.grid(row=0, column=2, sticky="nsew", padx=10, pady=10)
 
         return frame
 
@@ -228,21 +233,29 @@ class FileWindow(ScrolledFrame):
 
         self.file_images_display.pack(expand=True, fill="both")
 
-        # this button triggers the task
+        # button to trigger the task
         ttk.Button(
-            master=self.panel, text="Something", command=lambda: self.task(task)
+            master=self.panel, text="Something", command=lambda: self.task(task, files)
         ).pack(expand=True, fill="both")
 
-        self.panel.animate_forward()
+        self.panel.animate_forward()  # panel slides into the app
 
         self.pack(expand=True, fill="both")
 
     # action to perform
-    def task(self, task: str):
-        self.panel.animate_backwards()
+    def task(self, task: str, files: tuple):
+        self.panel.animate_backwards()  # move panel backwards
 
         if task == "Merge":
-            print("I merged things :D")
+            basedoc = fitz.open(files[0])
+
+            if len(files) > 1:
+                for i in range(1, len(files)):
+                    doc = fitz.open(files[i])
+                    basedoc.insert_pdf(doc)
+            
+            basedoc.save("output.pdf")
+
         elif task == "Split":
             print("I split things :D")
         elif task == "Compress":
