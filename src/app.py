@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 # PDF tools
 import fitz
+from PyPDF2 import PdfReader, PdfWriter
 
 
 # main app
@@ -210,7 +211,7 @@ class FileWindow(ScrolledFrame):
         # this will hold the file page images
         self.images = []
         self.file_images_display = ScrolledFrame(
-            master=self.panel, autohide=True, bootstyle="secondary"
+            master=self.panel, autohide=True, bootstyle="light"
         )
 
         # display files in main window
@@ -233,14 +234,53 @@ class FileWindow(ScrolledFrame):
 
         self.file_images_display.pack(expand=True, fill="both")
 
+        # options according to the task
+        self.extra_options(task, files)
+
         # button to trigger the task
         ttk.Button(
-            master=self.panel, text="Something", command=lambda: self.task(task, files)
-        ).pack(expand=True, fill="both")
+            master=self.panel, text=task, command=lambda: self.task(task, files)
+        ).pack(fill="x", padx=10, pady=5)
 
         self.panel.animate_forward()  # panel slides into the app
 
         self.pack(expand=True, fill="both")
+
+    # extra options layout
+    def extra_options(self, task: str, files: tuple):
+        # add reverse checkbox for the Merge task
+        if task == "Merge":
+            self.reverse_check = ttk.Checkbutton(
+                master=self.panel,
+                text="       Reverse order",
+                bootstyle="info-square-toggle",
+            )
+            self.reverse_check.pack(pady=10)
+
+        # Add split point menu button to the Split task
+        elif task == "Split":
+            doc = fitz.open(files[0])
+
+            self.split_point = ttk.Menubutton(
+                master=self.panel,
+                text="Split after page: ",
+                bootstyle="info",
+            )
+
+            pages = tk.Menu(self.split_point)
+
+            # counting the number of pages in the document and adding them as options for the Menubutton
+            self.split_option = tk.IntVar(value=1)
+            counter = 0
+            for page in doc:
+                counter += 1
+                pages.add_radiobutton(
+                    label=str(counter), value=counter, variable=self.split_option
+                )
+
+            self.split_point["menu"] = pages
+
+            self.split_point.pack(pady=10)
 
     # action to perform
     def task(self, task: str, files: tuple):
@@ -253,16 +293,36 @@ class FileWindow(ScrolledFrame):
                 for i in range(1, len(files)):
                     doc = fitz.open(files[i])
                     basedoc.insert_pdf(doc)
-            
+
             basedoc.save("output.pdf")
 
         elif task == "Split":
-            print("I split things :D")
+            pivot = self.split_option.get()
+
+            with open(files[0], "rb") as infile:
+                reader = PdfReader(infile)
+                writer2 = PdfWriter()
+                writer1 = PdfWriter()
+
+                num_pages = reader._get_num_pages()
+
+                for i in range(0, pivot):
+                    writer1.add_page(reader.pages[i])
+
+                for i in range(pivot, num_pages):
+                    writer2.add_page(reader.pages[i])
+
+                with open("split1.pdf", "wb") as out1:
+                    writer1.write(out1)
+
+                with open("split2.pdf", "wb") as out2:
+                    writer2.write(out2)
+
         elif task == "Compress":
             print("I compressed things :D")
 
     # extract pdf page images
-    def extract_images(self, filenum: int, filepath: str):
+    def extract_images(self, filenum: int, filepath: str) -> None:
         doc = fitz.open(filepath)
         imgs = []
         w = 250
