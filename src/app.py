@@ -3,6 +3,7 @@ import tkinter as tk
 import ttkbootstrap as ttk
 from tkinter import filedialog as fd
 from ttkbootstrap.scrolled import ScrolledFrame
+from ttkbootstrap.tableview import Tableview
 
 # filename manipulation
 import os
@@ -209,23 +210,47 @@ class FileWindow(ScrolledFrame):
         self.panel = SlidePanel(parent, 1, 0.8)  # side panel instance
 
         # this will hold the file page images
+        self.total_img = []
         self.images = []
         self.file_images_display = ScrolledFrame(
             master=self.panel, autohide=True, bootstyle="light"
         )
 
+        # table view to display files in use and their info
+        headers = [
+            {"text": "ID", "stretch": False},
+            {"text": "File name", "stretch": False},
+            {"text": "Pages", "stretch": True},
+            {"text": "Size", "stretch": True},
+        ]
+
+        self.dt = Tableview(master=self, coldata=headers, bootstyle="default")
+
         # display files in main window
         for index, file in enumerate(files):
             filename = os.path.basename(file)
+            size_mb = os.stat(file).st_size / (1024**2)
 
-            ttk.Label(master=self, text=f"{index + 1}:\t\t{filename}").pack(
-                expand=True, fill="both"
-            )
+            if size_mb < 1:
+                size_kb = size_mb * 1024
+                size = f"{round(size_kb, 4)} Kb"
+            else:
+                size = f"{round(size_mb, 4)} Mb" 
+
+            with open(file, "rb") as f:
+                reader = PdfReader(f)
+                self.dt.insert_row("end", [index, filename, len(reader.pages), size])
+                self.dt.load_table_data()
 
             self.images = self.extract_images(index, file)
 
+            for img in self.images:
+                self.total_img.append(img)
+
+        self.dt.place(relwidth=0.78, relheight=0.8)
+
         # display files in side panel
-        for img in self.images:
+        for img in self.total_img:
             ttk.Label(
                 master=self.file_images_display,
                 image=img,
