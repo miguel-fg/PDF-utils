@@ -20,13 +20,6 @@ class App(ttk.Window):
     def __init__(self, title: str, dimensions: tuple) -> None:
         super().__init__(themename="morph")
 
-        # creates a clean cache folder for GUI display images
-        if not os.path.exists("src\.imgcache"):
-            os.makedirs("src\.imgcache")
-        else:
-            for img in os.scandir("src\.imgcache"):
-                os.remove(img.path)
-
         # app setup
         self.title(title)
         self.geometry(f"{dimensions[0]}x{dimensions[1]}")
@@ -40,6 +33,13 @@ class App(ttk.Window):
 
     # Main menu of the app, user selects task to perform
     def main_menu(self) -> None:
+        # creates a clean cache folder for GUI display images
+        if not os.path.exists("src\.imgcache"):
+            os.makedirs("src\.imgcache")
+        else:
+            for img in os.scandir("src\.imgcache"):
+                os.remove(img.path)
+
         # labels
         self.app_title = ttk.Label(
             master=self,
@@ -250,10 +250,12 @@ class FileWindow(ScrolledFrame):
     def extra_options(self, task: str, files: tuple):
         # add reverse checkbox for the Merge task
         if task == "Merge":
+            self.checkVar = tk.IntVar(value=0)
             self.reverse_check = ttk.Checkbutton(
                 master=self.panel,
                 text="       Reverse order",
                 bootstyle="info-square-toggle",
+                variable=self.checkVar,
             )
             self.reverse_check.pack(pady=10)
 
@@ -287,14 +289,16 @@ class FileWindow(ScrolledFrame):
         self.panel.animate_backwards()  # move panel backwards
 
         if task == "Merge":
-            basedoc = fitz.open(files[0])
+            merger = PdfWriter()
 
-            if len(files) > 1:
-                for i in range(1, len(files)):
-                    doc = fitz.open(files[i])
-                    basedoc.insert_pdf(doc)
+            if self.checkVar.get() == 1:
+                files = reversed(files)
 
-            basedoc.save("output.pdf")
+            for file in files:
+                merger.append(file)
+
+            with open("merged.pdf", "wb") as out:
+                merger.write(out)
 
         elif task == "Split":
             pivot = self.split_option.get()
@@ -319,7 +323,16 @@ class FileWindow(ScrolledFrame):
                     writer2.write(out2)
 
         elif task == "Compress":
-            print("I compressed things :D")
+            with open(files[0], "rb") as infile:
+                reader = PdfReader(infile)
+                writer = PdfWriter()
+
+                for page in reader.pages:
+                    page.compress_content_streams()
+                    writer.add_page(page)
+
+                with open("compressed.pdf", "wb") as out:
+                    writer.write(out)
 
     # extract pdf page images
     def extract_images(self, filenum: int, filepath: str) -> None:
