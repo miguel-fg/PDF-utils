@@ -4,6 +4,7 @@ import ttkbootstrap as ttk
 from tkinter import filedialog as fd
 from ttkbootstrap.scrolled import ScrolledFrame
 from ttkbootstrap.tableview import Tableview
+from ttkbootstrap.toast import ToastNotification
 
 # filename manipulation
 import os
@@ -19,12 +20,12 @@ from PyPDF2 import PdfReader, PdfWriter
 # main app
 class App(ttk.Window):
     def __init__(self, title: str, dimensions: tuple) -> None:
-        super().__init__(themename="morph")
+        super().__init__(themename="simplex")
 
         # app setup
         self.title(title)
         self.geometry(f"{dimensions[0]}x{dimensions[1]}")
-        self.minsize(width=1000, height=800)
+        self.minsize(width=1300, height=700)
 
         # main menu layout
         self.main_menu()
@@ -83,13 +84,13 @@ class App(ttk.Window):
             master=frame,
             text="Split",
             command=self.split_selected,
-            bootstyle="secondary",
+            bootstyle="primary",
         )
         compress_btn = ttk.Button(
             master=frame,
             text="Compress",
             command=self.compress_selected,
-            bootstyle="info",
+            bootstyle="primary",
         )
 
         merge_btn.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
@@ -145,7 +146,7 @@ class TaskWindow(ttk.Frame):
 
         # window title
         self.title_label = title_label
-        self.title_label.pack(fill="x")
+        self.title_label.pack(fill="x", pady=(5, 20))
 
         # inner frame
         self.import_frame = ttk.Frame(master=self)
@@ -156,9 +157,13 @@ class TaskWindow(ttk.Frame):
 
         # back button
         self.back_button = ttk.Button(
-            master=self, text="Back", command=lambda: self.go_back(parent)
+            master=self,
+            text="Back",
+            command=lambda: self.go_back(parent),
+            bootstyle="primary",
+            width=40,
         )
-        self.back_button.pack()
+        self.back_button.pack(pady=(0, 20))
 
         self.pack(expand=True, fill="both")
 
@@ -167,6 +172,7 @@ class TaskWindow(ttk.Frame):
         # clean the window and goes back to main menu
         self.title_label.pack_forget()
         self.pack_forget()
+
         p.main_menu()
 
 
@@ -180,7 +186,8 @@ class FileImport(ttk.Frame):
             master=self,
             text="Import Files",
             command=lambda: self.import_files(parent, task),
-            bootstyle="danger",
+            bootstyle="warning",
+            width=50,
         )
         self.button.pack(pady=10)
 
@@ -224,7 +231,7 @@ class FileWindow(ScrolledFrame):
             {"text": "Size", "stretch": True},
         ]
 
-        self.dt = Tableview(master=self, coldata=headers, bootstyle="default")
+        self.dt = Tableview(master=self, coldata=headers, bootstyle="light")
 
         # display files in main window
         for index, file in enumerate(files):
@@ -235,7 +242,7 @@ class FileWindow(ScrolledFrame):
                 size_kb = size_mb * 1024
                 size = f"{round(size_kb, 4)} Kb"
             else:
-                size = f"{round(size_mb, 4)} Mb" 
+                size = f"{round(size_mb, 4)} Mb"
 
             with open(file, "rb") as f:
                 reader = PdfReader(f)
@@ -264,7 +271,10 @@ class FileWindow(ScrolledFrame):
 
         # button to trigger the task
         ttk.Button(
-            master=self.panel, text=task, command=lambda: self.task(task, files)
+            master=self.panel,
+            text=task,
+            command=lambda: self.task(task, files),
+            bootstyle="warning",
         ).pack(fill="x", padx=10, pady=5)
 
         self.panel.animate_forward()  # panel slides into the app
@@ -359,8 +369,10 @@ class FileWindow(ScrolledFrame):
                 with open("compressed.pdf", "wb") as out:
                     writer.write(out)
 
+        self.task_complete(task)
+
     # extract pdf page images
-    def extract_images(self, filenum: int, filepath: str) -> None:
+    def extract_images(self, filenum: int, filepath: str) -> list:
         doc = fitz.open(filepath)
         imgs = []
         w = 250
@@ -379,6 +391,27 @@ class FileWindow(ScrolledFrame):
 
         return imgs
 
+    # task complete notification
+    def task_complete(self, task: str) -> None:
+        verb = ""
+
+        if task == "Merge":
+            verb = "merged"
+        elif task == "Split":
+            verb = "split"
+        else:
+            verb = "compressed"
+
+        self.toast = ToastNotification(
+            title=f"Files {verb} successfully",
+            message=f"Output file at {os.getcwd()}",
+            duration=5000,
+            bootstyle="success",
+            position=(100,100, "se")
+        )
+
+        self.toast.show_toast()
+
 
 # animated side panel
 class SlidePanel(ttk.Frame):
@@ -396,7 +429,7 @@ class SlidePanel(ttk.Frame):
         self.in_start_pos = True
 
         # layout
-        self.place(relx=start_pos, rely=0.05, relwidth=self.width, relheight=0.9)
+        self.place(relx=start_pos, rely=0, relwidth=self.width, relheight=0.9)
 
     # check which way to animate
     def animate(self) -> None:
@@ -409,7 +442,7 @@ class SlidePanel(ttk.Frame):
     def animate_forward(self) -> None:
         if self.pos > self.end_pos:
             self.pos -= 0.008
-            self.place(relx=self.pos, rely=0.05, relwidth=self.width, relheight=0.9)
+            self.place(relx=self.pos, rely=0, relwidth=self.width, relheight=0.9)
             self.after(10, self.animate_forward)
         else:
             self.in_start_pos = False
@@ -418,10 +451,10 @@ class SlidePanel(ttk.Frame):
     def animate_backwards(self) -> None:
         if self.pos < self.start_pos:
             self.pos += 0.008
-            self.place(relx=self.pos, rely=0.05, relwidth=self.width, relheight=0.9)
+            self.place(relx=self.pos, rely=0, relwidth=self.width, relheight=0.9)
             self.after(10, self.animate_backwards)
         else:
             self.in_start_pos = True
 
 
-App("PDF utilities", (1600, 900))
+App("PDF utilities", (1300, 700))
